@@ -1,10 +1,10 @@
+import io
+import re
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from PIL import ImageOps, Image
 import pytesseract
-import io
-import re
-from datetime import datetime
+from extract_details import get_age, get_license_number, get_name, get_validity
 
 app = FastAPI()
 
@@ -31,21 +31,9 @@ async def upload_image(file: UploadFile = File(...)):
     text = pytesseract.image_to_string(gray, config=config)
     clean_text = re.sub(r'[^A-Za-z0-9-\s]', '', text)
 
-    name = get_name(clean_text)
-    age = get_age(clean_text)
     return JSONResponse(content={
-        "name": name,
-        "age": age
+        "name": get_name(clean_text),
+        "age": get_age(clean_text),
+        "license_number": get_license_number(clean_text),
+        "validity": get_validity(clean_text),
     })
-
-
-def get_name(text: str):
-    match = re.search(r"Name\s+(.*)", text)
-    return match.group(1)
-
-
-def get_age(text: str):
-    match = re.search(r"DOB\s+(\d{2}-\d{2}-\d{4})", text)
-    dob = datetime.strptime(match.group(1), "%d-%m-%Y").date()
-    today = datetime.today().date()
-    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
